@@ -2,7 +2,7 @@
 
 *A comprehensive benchmark system for testing vehicles in a drag race environment.*
 
-[Logo](https://imgimp.xyz/images/Stoic-2025-04-14_17-58-45-67fd4cd5579d0.png)
+![Logo](https://imgimp.xyz/images/Stoic-2025-04-14_17-58-45-67fd4cd5579d0.png)
 
 ---
 
