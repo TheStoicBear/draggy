@@ -1,22 +1,14 @@
+-- server.lua
 local QBCore = exports['qb-core']:GetCoreObject()
 
--- This callback checks whether the player has the required item.
-QBCore.Functions.CreateCallback('dragRace:hasItem', function(source, cb, itemName)
+-- Register the drag race item as a useable item
+QBCore.Functions.CreateUseableItem('dragRaceItem', function(source, item)
     local Player = QBCore.Functions.GetPlayer(source)
-    if Player then
-        local item = Player.Functions.GetItemByName(itemName)
-        if item then
-            cb(true)
-        else
-            cb(false)
-        end
-    else
-        cb(false)
+    if not Player or not Player.Functions.GetItemByName(item.name) then 
+        return 
     end
-end)
 
--- When the item is used, trigger the client event that opens the drag race UI.
-exports['qb-inventory']:UseItem(Config.itemName, function(source)
+    -- When the item is used, trigger the client event that opens the drag race UI.
     TriggerClientEvent('dragRace:useItem', source)
-    print('Player [' .. source .. '] used the item: ' .. Config.itemName)
+    print('Player [' .. source .. '] used the item: ' .. item.name)
 end)
