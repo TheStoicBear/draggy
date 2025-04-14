@@ -9,6 +9,7 @@ local updateInterval = 100
 
 local speedBenchmarks = {60, 100, 120}
 local distanceBenchmarks = {0.125, 0.25, 0.5, 1}
+local QBCore = exports['qb-core']:GetCoreObject()
 
 local benchmarkData = {
   speedTimes = {},
