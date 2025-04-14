@@ -3,10 +3,13 @@ game 'gta5'
 
 author 'TheStoicBear'
 description 'Draggy Benchmark UI Script'
-version '1.0.0'
+version '4.1.0'
 
+shared_scripts{ 
+  'config.lua'
+}
+ 
 client_scripts {
-  'config.lua',
   'client.lua'
 }
 
