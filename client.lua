@@ -9,7 +9,6 @@ local updateInterval = 100
 
 local speedBenchmarks = {60, 100, 120}
 local distanceBenchmarks = {0.125, 0.25, 0.5, 1}
-local QBCore = exports['qb-core']:GetCoreObject()
 
 local benchmarkData = {
   speedTimes = {},
@@ -212,54 +211,13 @@ local function dragRaceLoop()
   print("[DragRace] Drag race benchmark loop ended")
 end
 
-local function canUseDragFeature(source, cb)
-  if not Config.useItem then
-    print("[DragRace] Config.useItem is false — items will NOT be used; enabling drag race via command")
-    cb(true)
-    return
-  end
-
-  if Config.inventory == "ox" then
-    print("[DragRace] Checking item via ox_inventory")
-    local items = exports.ox_inventory:Items()
-    if items[Config.itemName] then
-      print("[DragRace] Found item " .. Config.itemName .. " in ox_inventory")
-      cb(true)
-    else
-      print("[DragRace] Item " .. Config.itemName .. " not found in ox_inventory")
-      cb(false)
-    end
-  elseif Config.inventory == "qb" then
-    print("[DragRace] Checking item via qb-inventory (server callback)")
-    QBCore.Functions.TriggerCallback('dragRace:hasItem', function(hasItem)
-      if hasItem then
-        print("[DragRace] Found item " .. Config.itemName .. " in qb-inventory")
-        cb(true)
-      else
-        print("[DragRace] Item " .. Config.itemName .. " not found in qb-inventory")
-        cb(false)
-      end
-    end, Config.itemName)
-  else
-    print("[DragRace] Invalid inventory configuration.")
-    cb(false)
-  end
-end
-
--- Command to start the drag race using the asynchronous item check.
-RegisterCommand("draggy", function(source)
-  local ped = PlayerPedId()
-  if not IsPedInAnyVehicle(ped, false) then
-    TriggerEvent('chat:addMessage', {
-      args = {"[DragRacing] You must be in a vehicle to start drag racing!"}
-    })
-    return
-  end
-
-  canUseDragFeature(source, function(allowed)
-    if not allowed then
+-- When using a useable item from qb-inventory, the server triggers the event below.
+if Config.useItem then
+  RegisterNetEvent('dragRace:useItem', function()
+    local ped = PlayerPedId()
+    if not IsPedInAnyVehicle(ped, false) then
       TriggerEvent('chat:addMessage', {
-        args = {"[DragRacing] You don't have the required item: " .. Config.itemName}
+        args = {"[DragRacing] You must be in a vehicle to start drag racing!"}
       })
       return
     end
@@ -276,7 +234,6 @@ RegisterCommand("draggy", function(source)
       uiOpen = true
 
       local vehicleName, vehicleClass = getVehicleInfo(vehicle)
-
       updateUI({
         action = "open",
         vehicleName = vehicleName,
@@ -286,9 +243,92 @@ RegisterCommand("draggy", function(source)
         position = { x = 50, y = 10 },
         scale = 1
       })
-
       print("[DragRace] Drag racing UI opened. Waiting for vehicle to stop.")
       Citizen.CreateThread(dragRaceLoop)
     end
   end)
-end, false)
+else
+  -- Standalone / command mode: use the asynchronous item check via ox or qb inventory.
+  local function canUseDragFeature(source, cb)
+    if not Config.useItem then
+      print("[DragRace] Config.useItem is false — items will NOT be used; enabling drag race via command")
+      cb(true)
+      return
+    end
+
+    if Config.inventory == "ox" then
+      print("[DragRace] Checking item via ox_inventory")
+      local items = exports.ox_inventory:Items()
+      if items[Config.itemName] then
+        print("[DragRace] Found item " .. Config.itemName .. " in ox_inventory")
+        cb(true)
+      else
+        print("[DragRace] Item " .. Config.itemName .. " not found in ox_inventory")
+        cb(false)
+      end
+    elseif Config.inventory == "qb" then
+      print("[DragRace] Using Usable Item via qb-inventory (server callback)")
+    else
+      print("[DragRace] Invalid inventory configuration.")
+      cb(false)
+    end
+  end
+
+  -- Command to start the drag race using the asynchronous item check.
+  RegisterCommand("draggy", function(source)
+    local ped = PlayerPedId()
+    if not IsPedInAnyVehicle(ped, false) then
+      TriggerEvent('chat:addMessage', {
+        args = {"[DragRacing] You must be in a vehicle to start drag racing!"}
+      })
+      return
+    end
+
+    canUseDragFeature(source, function(allowed)
+      if not allowed then
+        TriggerEvent('chat:addMessage', {
+          args = {"[DragRacing] You don't have the required item: " .. Config.itemName}
+        })
+        return
+      end
+
+      vehicle = GetVehiclePedIsIn(ped, false)
+      mode = "race"
+
+      if uiOpen then
+        uiOpen = false
+        benchmarkState = "idle"
+        updateUI({ action = "close" })
+        print("[DragRace] Drag racing UI closed.")
+      else
+        uiOpen = true
+
+        local vehicleName, vehicleClass = getVehicleInfo(vehicle)
+        updateUI({
+          action = "open",
+          vehicleName = vehicleName,
+          vehicleClass = vehicleClass,
+          performance = getVehicleWheelPowerStats(vehicle),
+          status = "Waiting for you to Stop",
+          position = { x = 50, y = 10 },
+          scale = 1
+        })
+        print("[DragRace] Drag racing UI opened. Waiting for vehicle to stop.")
+        Citizen.CreateThread(dragRaceLoop)
+      end
+    end)
+  end, false)
+end
+
+-- Backspace key listener to close the UI.
+Citizen.CreateThread(function()
+  while true do
+    Citizen.Wait(0)
+    if uiOpen and IsControlJustPressed(0, 177) then -- 177 = Backspace
+      uiOpen = false
+      benchmarkState = "idle"
+      updateUI({ action = "close" })
+      print("[DragRace] Drag racing UI closed via backspace.")
+    end
+  end
+end)
