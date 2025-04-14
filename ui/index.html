@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Drag Racing Telemetry</title>
+  <!-- Bootstrap 5 CDN -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --neon-blue: #4f46e5;
+      --cyber-purple: #8b5cf6;
+      --hud-green: #10b981;
+      --terminal-gray: #1f2937;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Inter', sans-serif;
+      background: #0d0d0d00;
+      user-select: none;
+    }
+    #benchmark-ui {
+  position: absolute;
+  top: 50%;
+  left: 85%;
+  transform: translate(-50%, -50%) scale(1);
+  width: 380px;
+  display: none;
+  z-index: 9999;
+  background: rgba(23, 23, 23, 0.95);
+
+  border-radius: 20px; /* Slightly more rounded */
+  border: 1px solid rgba(248, 0, 0, 0.1);
+  backdrop-filter: blur(12px);
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-header {
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+}
+
+.performance-grid {
+  border-radius: 12px;
+}
+
+.performance-item {
+  border-radius: 10px;
+}
+
+.list-group-item {
+  border-radius: 8px;
+}
+    .card-header {
+      background: linear-gradient(135deg, var(--terminal-gray), #111827);
+      border-bottom: 1px solid rgba(79, 70, 229, 0.2);
+      padding: 1.25rem;
+    }
+
+    .card-title {
+      font-weight: 700;
+      font-size: 1.25rem;
+      letter-spacing: -0.025em;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .card-title::before {
+      content: "";
+      width: 8px;
+      height: 24px;
+      background: var(--neon-blue);
+      border-radius: 4px;
+    }
+
+    .metric-label {
+      color: #9ca3af;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+
+    .metric-value {
+      color: #fff;
+      font-weight: 600;
+      font-size: 1.125rem;
+      letter-spacing: -0.01em;
+    }
+
+    /* Adaptive grid for performance items */
+    .performance-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+      gap: 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      padding: 1rem;
+      border-radius: 8px;
+      margin: 1rem 0;
+    }
+
+    .performance-item {
+      text-align: center;
+      padding: 0.75rem;
+      background: rgba(79, 70, 229, 0.1);
+      border-radius: 6px;
+    }
+
+    .benchmark-list {
+      background: transparent;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .list-group-item {
+      background: rgba(255, 255, 255, 0.03);
+      color: #fff;
+      border-color: rgba(255, 255, 255, 0.05);
+      padding: 0.75rem 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .status-pill {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--hud-green);
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.8; }
+      50% { opacity: 1; }
+      100% { opacity: 0.8; }
+    }
+
+  </style>
+</head>
+<body>
+  <div id="benchmark-ui" class="card">
+    <div class="card-header">
+      <h5 class="card-title">DRAG TELEMETRY SYSTEM</h5>
+    </div>
+    <div class="card-body p-0">
+      <div class="p-3">
+        <div class="d-flex justify-content-between mb-4">
+          <div>
+            <div class="metric-label">Vehicle</div>
+            <div class="metric-value" id="vehicle-name">-</div>
+          </div>
+          <div>
+            <div class="metric-label">Class</div>
+            <div class="metric-value" id="vehicle-class">-</div>
+          </div>
+          <div>
+            <div class="metric-label">Status</div>
+            <div class="status-pill" id="status-text">IDLE</div>
+          </div>
+        </div>
+
+        <!-- Performance Grid for Speed and Elapsed Time -->
+        <div class="performance-grid">
+          <div class="performance-item">
+            <div class="metric-label">Current Speed</div>
+            <div class="metric-value" id="current-speed">0</div>
+          </div>
+          <div class="performance-item">
+            <div class="metric-label">Top Speed</div>
+            <div class="metric-value" id="top-speed">0</div>
+          </div>
+          <div class="performance-item">
+            <div class="metric-label">Elapsed Time</div>
+            <div class="metric-value" id="elapsed-time">0</div>
+          </div>
+        </div>
+
+        <!-- Speed Benchmarks -->
+        <div class="mb-3">
+          <div class="d-flex justify-content-between mb-2">
+            <h6 class="metric-label">SPEED BENCHMARKS</h6>
+            <div class="metric-label">Time (s)</div>
+          </div>
+          <ul class="list-group benchmark-list" id="speed-list"></ul>
+        </div>
+
+        <!-- Distance Benchmarks -->
+        <div class="mb-3">
+          <div class="d-flex justify-content-between mb-2">
+            <h6 class="metric-label">DISTANCE BENCHMARKS</h6>
+            <div class="metric-label">Time (s)</div>
+          </div>
+          <ul class="list-group benchmark-list" id="distance-list"></ul>
+        </div>
+
+        <!-- Performance Grid for Power & Torque -->
+        <div class="performance-grid">
+          <div class="performance-item">
+            <div class="metric-label">Avg Power</div>
+            <div class="metric-value" id="avg-power">-</div>
+          </div>
+          <div class="performance-item">
+            <div class="metric-label">Max Power</div>
+            <div class="metric-value" id="max-power">-</div>
+          </div>
+          <div class="performance-item">
+            <div class="metric-label">Avg Torque</div>
+            <div class="metric-value" id="avg-torque">-</div>
+          </div>
+          <div class="performance-item">
+            <div class="metric-label">Max Torque</div>
+            <div class="metric-value" id="max-torque">-</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const ui = document.getElementById('benchmark-ui');
+
+    // Listen for messages from the client script
+    window.addEventListener('message', function(event) {
+      let data = event.data;
+      if (data.action === 'open') {
+        ui.style.display = 'block';
+        if (data.scale) {
+          ui.style.transform = `translate(-50%, -50%) scale(${data.scale})`;
+        } else {
+          ui.style.transform = 'translate(-50%, -50%) scale(1)';
+        }
+        document.getElementById('status-text').innerText = data.status || "";
+        document.getElementById('status-text').style.color = data.statusColor || "#000";
+        if (data.vehicleName) {
+          document.getElementById('vehicle-name').innerText = data.vehicleName;
+        }
+        if (data.vehicleClass) {
+          document.getElementById('vehicle-class').innerText = data.vehicleClass;
+        }
+        // Clear benchmark lists
+        document.getElementById('speed-list').innerHTML = "";
+        document.getElementById('distance-list').innerHTML = "";
+      }
+      else if (data.action === 'status') {
+        document.getElementById('status-text').innerText = data.text;
+        document.getElementById('status-text').style.color = data.statusColor || "#000";
+      }
+      else if (data.action === 'update') {
+        document.getElementById('current-speed').innerText = data.speed.toFixed(2);
+        document.getElementById('top-speed').innerText = data.topSpeed.toFixed(2);
+        document.getElementById('elapsed-time').innerText = data.elapsedTime.toFixed(2);
+        document.getElementById('status-text').innerText = data.status;
+        document.getElementById('status-text').style.color = data.statusColor || "#000";
+        // Update speed benchmarks list
+        const speedList = document.getElementById('speed-list');
+        speedList.innerHTML = "";
+        if (data.speedTimes) {
+          for (let label in data.speedTimes) {
+            let li = document.createElement('li');
+            li.className = "list-group-item p-1";
+            li.innerText = label + ": " + data.speedTimes[label].toFixed(2) + "s";
+            speedList.appendChild(li);
+          }
+        }
+        // Update distance benchmarks list
+        const distanceList = document.getElementById('distance-list');
+        distanceList.innerHTML = "";
+        if (data.distanceTimes) {
+          for (let label in data.distanceTimes) {
+            let li = document.createElement('li');
+            li.className = "list-group-item p-1";
+            li.innerText = label + ": " + data.distanceTimes[label].toFixed(2) + "s";
+            distanceList.appendChild(li);
+          }
+        }
+        // Update power and torque stats if available
+        if (data.performance) {
+          document.getElementById('avg-power').innerText = data.performance.averageHP.toFixed(2);
+          document.getElementById('max-power').innerText = data.performance.maxHP.toFixed(2);
+          document.getElementById('avg-torque').innerText = data.performance.averageTorque.toFixed(2);
+          document.getElementById('max-torque').innerText = data.performance.maxTorque.toFixed(2);
+        }
+      }
+      else if (data.action === 'close') {
+        ui.style.display = 'none';
+      }
+    });
+
+    // Close button callback
+    document.getElementById('close-btn').addEventListener('click', function() {
+      fetch(`https://${GetParentResourceName()}/close`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json; charset=UTF-8' },
+        body: JSON.stringify({})
+      });
+    });
+  </script>
+</body>
+</html>
